@@ -2,7 +2,8 @@
   <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>時尚登入介面</title>
+  <title>特戰英豪登入介面</title>
+  <link rel="icon" href="https://yt3.googleusercontent.com/7NSzHZlaIM0q8yteFQJuI3SEOr4Ntb28uXlGdfj2HAdiWqBCHUBbQpizheJch2hCr9RcveSD6w=s900-c-k-c0x00ffffff-no-rj" type="image/x-icon">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
 
@@ -135,26 +136,39 @@
 <body>
   <div class="login-container">
     <h1>Welcome Back</h1>
-    <form id="login-form" action="welcome.php" method="POST">
-      <div class="input-group">
-        <input type="text" id="username" required>
-        <label for="username">Username</label>
-      </div>
-      <div class="input-group">
-        <input type="password" id="password" required>
-        <label for="password">Password</label>
-      </div>
-      <button type="submit">Sign In</button>
-    </form>
+    <div id="login-form">
+      <form>
+        <div class="input-group">
+          <input type="text" id="username" required>
+          <label for="username">Username</label>
+        </div>
+        <div class="input-group">
+          <input type="password" id="password" required>
+          <label for="password">Password</label>
+        </div>
+        <button type="submit">Sign In</button>
+      </form>
+    </div>
+    <div id="forgot-password">
+      <form>
+        <div class="input-group">
+          <input type="text" id="username" required>
+          <label for="username">Username</label>
+        </div>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
     <div class="links">
-      <a href="forgot-password">Forgot Password?</a>
-      <a href="signup">Create Account</a>
+      <a href="forgot-password" id="Forgot">Forgot Password?</a>
+      <a href="signup" id="Sign">Create Account</a>
     </div>
   </div>
 
   <script>
     const d_user = {'eric':'123qweasd','stiff':'1234'} 
-
+    const forgot = document.getElementById('forgot-password').innerHTML;
+    const sign = document.getElementById('login-form').innerHTML;
+    document.getElementById('forgot-password').innerHTML='';
     document.getElementById('login-form').addEventListener('submit', function(e) {
       e.preventDefault();
       
@@ -165,10 +179,29 @@
       console.log('Login attempt:', { username, password });
       if(d_user[username] == password){
         alert('Login successful!');
-        window.location.assign("./gqVpC1ofirWat0mlw.html");//跳轉到HTTP://www.google.com
+        window.open("https://www.youtube.com/watch?v=UaPVEzc0qfw");
       }
 
     });
+    document.getElementById('Forgot').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('login-form').innerHTML='';
+      document.getElementById('forgot-password').innerHTML=forgot;
+      // document.querySelector(".title").appendChild(str);
+    });
+
+    document.getElementById('forgot-password').addEventListener('submit', function(e) {  //忘記密碼
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      if(d_user[username]){
+        alert('小笨蛋 Your password is :' + d_user[username]);
+        window.location.reload();
+      }
+
+    });
+
+
+
 
     // Add some interactivity
     const inputs = document.querySelectorAll('input');
