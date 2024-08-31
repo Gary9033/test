@@ -2,7 +2,7 @@
   <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>特戰英豪登入介面</title>
+  <title>時尚登入介面</title>
   <link rel="icon" href="https://yt3.googleusercontent.com/7NSzHZlaIM0q8yteFQJuI3SEOr4Ntb28uXlGdfj2HAdiWqBCHUBbQpizheJch2hCr9RcveSD6w=s900-c-k-c0x00ffffff-no-rj" type="image/x-icon">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
@@ -135,7 +135,7 @@
   </head>
 <body>
   <div class="login-container">
-    <h1>Welcome Back</h1>
+    <h1 id="Welcome">Welcome Back</h1>
     <div id="login-form">
       <form>
         <div class="input-group">
@@ -157,6 +157,9 @@
         </div>
         <button type="submit">Submit</button>
       </form>
+    </div>
+    <div id="create">
+
     </div>
     <div class="links">
       <a href="forgot-password" id="Forgot">Forgot Password?</a>
@@ -186,9 +189,36 @@
     document.getElementById('Forgot').addEventListener('click', function(e) {
       e.preventDefault();
       document.getElementById('login-form').innerHTML='';
+      document.getElementById('create').innerHTML='';
       document.getElementById('forgot-password').innerHTML=forgot;
       // document.querySelector(".title").appendChild(str);
     });
+    document.getElementById('Sign').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('login-form').innerHTML='';
+      document.getElementById('forgot-password').innerHTML='';
+      document.getElementById('create').innerHTML='<form><div class="input-group"><input type="text" id="username" required><label for="username">Username</label></div><div class="input-group"><input type="password" id="password" required><label for="password">Password</label></div><button type="submit">Register</button></form>';
+      
+    });
+
+    document.getElementById('create').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      d_user[username]=password;
+      console.log(d_user);
+     
+    });
+
+    document.getElementById('Welcome').addEventListener('click', function(e) {
+      e.preventDefault();
+      document.getElementById('forgot-password').innerHTML='';
+      document.getElementById('create').innerHTML='';
+      document.getElementById('login-form').innerHTML=sign;     
+    });
+
+
+
 
     document.getElementById('forgot-password').addEventListener('submit', function(e) {  //忘記密碼
       e.preventDefault();
