@@ -57,7 +57,6 @@ def detect_and_crop_both_feet(file_path, padding_ratio=None, save_output=True):
     feet_min_x = min(x_coords)
     feet_max_x = max(x_coords)
     feet_width = feet_max_x - feet_min_x
-    foot_points[4][1]
     
     feet_width_ratio = feet_width / w
     
@@ -95,8 +94,7 @@ def detect_and_crop_both_feet(file_path, padding_ratio=None, save_output=True):
     cv2.circle(img_bgr, right_heel_px, 5, (0, 255, 255), -1)
     cv2.circle(img_bgr, left_ankle_px, 5, (0, 255, 0), -1)
     cv2.circle(img_bgr, right_ankle_px, 5, (0, 255, 0), -1)
-    right_foot_crop_x = right_foot_px[0] - min_x
-    right_foot_crop_y = right_foot_px[1] - min_y
+    
     feet_crop = img_bgr[min_y:max_y, min_x:max_x]
     
     if save_output:
@@ -105,7 +103,15 @@ def detect_and_crop_both_feet(file_path, padding_ratio=None, save_output=True):
         print(f"✂️ 雙腳裁切圖已儲存: {crop_path}")
     
     result = {
-        'right_foot_toe': right_foot_crop_y,
+        'left_foot_toe': left_foot_px,
+        'left_foot_heel': left_heel_px,
+        'left_ankle': left_ankle_px,
+        'right_foot_toe': right_foot_px,
+        'right_foot_heel': right_heel_px,
+        'right_ankle': right_ankle_px,
+        'crop_region': (min_x, min_y, max_x, max_y),
+        'crop_size': (max_x - min_x, max_y - min_y),
+        'feet_crop': feet_crop,
         'feet_width': feet_width,
         'feet_width_ratio': feet_width_ratio,
         'padding_used': padding
