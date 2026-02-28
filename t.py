@@ -1,27 +1,25 @@
 
-def detect_and_crop_both_feet(file_path, padding_ratio=None, save_output=True):
-    """
-    偵測雙腳位置並裁切（padding 根據腳距佔圖片寬度的比例自動計算）
-    
-    Args:
-        file_path: 圖片路徑
-        padding_ratio: 如果為 None，則自動使用 feet_width/image_width 作為 padding_ratio
-                      也可手動指定比例（例如 0.1 表示 padding = 圖片寬度的 10%）
-        save_output: 是否儲存結果
-    """
+def mediapipe_detect(file_path):
+    """MediaPipe 姿勢偵測（保持圖片直立方向）"""
     
     model_path = 'pose_landmarker.task'
     if not os.path.exists(model_path):
         print(f"❌ 找不到模型檔案: {model_path}")
-        return None
+        print("請從以下網址下載: https://developers.google.com/mediapipe/solutions/vision/pose_landmarker")
+        return None, None
+    
+    if not os.path.exists(file_path):
+        print(f"❌ 找不到圖片檔案: {file_path}")
+        return None, None
     
     img_cv = cv2.imread(file_path)
     if img_cv is None:
         print(f"❌ 無法讀取圖片: {file_path}")
-        return None
+        return None, None
     
     img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
-    h, w, _ = img_rgb.shape
+    
+    print(f"📐 圖片尺寸: 高 {img_rgb.shape[0]} x 寬 {img_rgb.shape[1]}")
     
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=img_rgb)
     
@@ -33,88 +31,70 @@ def detect_and_crop_both_feet(file_path, padding_ratio=None, save_output=True):
     detector = vision.PoseLandmarker.create_from_options(options)
     
     detection_result = detector.detect(mp_image)
+    img_array = img_rgb
+
+    height_pixels = 0
+    if detection_result.segmentation_masks:
+        mask = detection_result.segmentation_masks[0].numpy_view()
+
+        if mask.ndim == 3 and mask.shape[2] == 1:
+            mask_2d = mask[:, :, 0]
+        elif mask.ndim == 2:
+            mask_2d = mask
+        else:
+            raise ValueError(f"Unexpected mask shape: {mask.shape}")
+
+        y_indices, x_indices = np.where(mask_2d > 0.5)
+        if len(y_indices) > 0:
+            top_y = np.min(y_indices)
+            bottom_y = np.max(y_indices)
+            height_pixels = bottom_y - top_y
+            print(f"頭到腳的 pixel 高度: {height_pixels} 像素")
+        else:
+            top_y = bottom_y = 0
+            print("未偵測到人體區域，請確認影像中有人物。")
+
+        color_mask = np.zeros_like(img_array, dtype=np.uint8)
+        color_mask[mask_2d > 0.5] = (0, 0, 255)
+        alpha = 0.5
+        overlay = cv2.addWeighted(img_array, 1.0, color_mask, alpha, 0)
+
+        h, w, _ = overlay.shape
+        center_x = w // 2
+        cv2.circle(overlay, (center_x, top_y), 8, (0, 255, 255), -1)
+        cv2.circle(overlay, (center_x, bottom_y), 8, (0, 255, 255), -1)
+
+        text1 = f"Height: {height_pixels}px"
+        cv2.putText(overlay, text1, (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+
+        out_path = os.path.splitext(file_path)[0] + "_overlay.png"
+        cv2.imwrite(out_path, cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
+        print(f"✅ 覆蓋圖已儲存: {out_path}")
+
+    annotated_image, all_landmark_pixels = draw_selected_landmarks(img_array, detection_result)
     
-    if not detection_result.pose_landmarks:
-        print("❌ 未偵測到人體姿勢！")
-        return None
+    landmarks_path = os.path.splitext(file_path)[0] + "_landmarks.png"
+    cv2.imwrite(landmarks_path, cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
+    print(f"✅ 關節點標記圖已儲存: {landmarks_path}")
+
+    left_index = None
+    right_index = None
     
-    pose_landmarks = detection_result.pose_landmarks[0]
-    
-    foot_landmarks = [
-        pose_landmarks[27],  # LEFT_ANKLE
-        pose_landmarks[28],  # RIGHT_ANKLE
-        pose_landmarks[29],  # LEFT_HEEL
-        pose_landmarks[30],  # RIGHT_HEEL
-        pose_landmarks[31],  # LEFT_FOOT_INDEX
-        pose_landmarks[32],  # RIGHT_FOOT_INDEX
-    ]
-    
-    foot_points = [(int(lm.x * w), int(lm.y * h)) for lm in foot_landmarks]
-    
-    x_coords = [pt[0] for pt in foot_points]
-    y_coords = [pt[1] for pt in foot_points]
-    
-    feet_min_x = min(x_coords)
-    feet_max_x = max(x_coords)
-    feet_width = feet_max_x - feet_min_x
-    
-    feet_width_ratio = feet_width / w
-    
-    if padding_ratio is None:
-        padding_ratio = feet_width_ratio + 0.03  # 預設在腳距比例基礎上增加 5% 的 padding
-    
-    padding = int(w * padding_ratio)
-    
-    print(f"📏 左右腳距離: {feet_width} 像素")
-    print(f"📐 圖片寬度: {w} 像素")
-    print(f"📊 腳距佔圖片寬度比: {feet_width_ratio*100:.2f}%")
-    print(f"🔧 padding_ratio: {padding_ratio*100:.2f}%")
-    print(f"✂️ 計算出的 padding: {padding} 像素 (圖片寬度的 {padding_ratio*100:.2f}%)")
-    
-    min_x = max(0, min(x_coords) - padding)
-    max_x = min(w, max(x_coords) + padding)
-    min_y = max(0, min(y_coords) - padding)
-    max_y = min(h, max(y_coords) + padding)
-    
-    left_ankle_px = foot_points[0]
-    right_ankle_px = foot_points[1]
-    left_heel_px = foot_points[2]
-    right_heel_px = foot_points[3]
-    left_foot_px = foot_points[4]
-    right_foot_px = foot_points[5]
-    
-    print(f"📦 雙腳裁切區域: ({min_x}, {min_y}) 到 ({max_x}, {max_y})")
-    print(f"📐 裁切尺寸: {max_x - min_x} x {max_y - min_y} 像素")
-    
-    img_bgr = img_cv.copy()
-    
-    cv2.circle(img_bgr, left_foot_px, 5, (255, 0, 255), -1)
-    cv2.circle(img_bgr, right_foot_px, 5, (255, 0, 255), -1)
-    cv2.circle(img_bgr, left_heel_px, 5, (0, 255, 255), -1)
-    cv2.circle(img_bgr, right_heel_px, 5, (0, 255, 255), -1)
-    cv2.circle(img_bgr, left_ankle_px, 5, (0, 255, 0), -1)
-    cv2.circle(img_bgr, right_ankle_px, 5, (0, 255, 0), -1)
-    
-    feet_crop = img_bgr[min_y:max_y, min_x:max_x]
-    
-    if save_output:
-        crop_path = "both_feet_crop.png"
-        cv2.imwrite(crop_path, feet_crop)
-        print(f"✂️ 雙腳裁切圖已儲存: {crop_path}")
-    
-    result = {
-        'left_foot_toe': left_foot_px,
-        'left_foot_heel': left_heel_px,
-        'left_ankle': left_ankle_px,
-        'right_foot_toe': right_foot_px,
-        'right_foot_heel': right_heel_px,
-        'right_ankle': right_ankle_px,
-        'crop_region': (min_x, min_y, max_x, max_y),
-        'crop_size': (max_x - min_x, max_y - min_y),
-        'feet_crop': feet_crop,
-        'feet_width': feet_width,
-        'feet_width_ratio': feet_width_ratio,
-        'padding_used': padding
-    }
-    
-    return result
+    if all_landmark_pixels and len(all_landmark_pixels) > 0:
+        for name, x, y in all_landmark_pixels[0]:
+            if name == "LEFT_INDEX":
+                left_index = (x, y)
+            elif name == "RIGHT_INDEX":
+                right_index = (x, y)
+
+    hand_distance = 0
+    if left_index and right_index:
+        lx, ly = left_index
+        rx, ry = right_index
+        hand_distance = round(np.sqrt((lx - rx) ** 2 + (ly - ry) ** 2), 2)
+        print(f"左右食指的距離: {hand_distance} 像素")
+    else:
+        print("⚠️ 未偵測到左右食指")
+
+    return hand_distance, height_pixels
